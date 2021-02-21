@@ -17,6 +17,30 @@ from art.utils import load_cifar10
 
 attack_method = sys.argv[-1]
 
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+
+        self.conv1 = nn.Conv2d(1, 32, 5, 1, 2)
+        self.conv2 = nn.Conv2d(32, 64, 5, 1, 2)
+        self.fc1 = nn.Linear(3136, 10)
+        self.dropout1 = nn.Dropout(0.25)
+        self.dropout2 = nn.Dropout(0.5)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = F.max_pool2d(x, 2)
+        x = self.dropout1(x)
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = F.max_pool2d(x, 2)
+        x = torch.flatten(x, 1)
+        x = self.dropout2(x)
+        x = self.fc1(x)
+        return x
+
+
 # Step 1: Load the MNIST dataset
 min_pixel_value, max_pixel_value = 0., 1.
 x_test = np.load('../mnist_update/data/mnist_data.npy')[60000:].astype(np.float32)

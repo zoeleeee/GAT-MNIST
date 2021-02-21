@@ -64,10 +64,10 @@ print("Accuracy on benign test examples: {}%".format(accuracy * 100))
 
 # Step 6: Generate adversarial test examples
 if attack_method == 'PGD':
-    attack = ProjectedGradientDescent(estimator=classifier, eps=8/255, eps_step=0.16/255, num_random_init=1)
+    attack = ProjectedGradientDescent(estimator=classifier, eps=0.3, eps_step=1.5e-3, num_random_init=1)
 
 elif attack_method == 'FGSM':
-    attack = FastGradientMethod(estimator=classifier, eps=8/255)
+    attack = FastGradientMethod(estimator=classifier, eps=0.3)
 
 elif attack_method == 'CW':
     attack = CarliniL2Method(classifier=classifier)

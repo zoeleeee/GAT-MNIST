@@ -103,7 +103,7 @@ elif attack_method == 'JSMA':
     attack = SaliencyMapMethod(classifier=classifier)
 
 elif attack_method == 'Wasserstein':
-    attack = Wasserstein(estimator=classifier, regularization=1)
+    attack = Wasserstein(estimator=classifier, regularization=100)
 
 # x_test_adv = attack.generate(x=x_test[tot_idxs])
 

@@ -63,9 +63,7 @@ class PGDAttackOpt(PGDAttack):
     def __init__(self, naive_classifier, base_detector, idx, **kwargs):
         super().__init__(**kwargs)
 
-        self.x_input = tf.placeholder(dtype=tf.float32, shape=[None, 32, 32, 3], name='x_input')
-        self.y_input = tf.placeholder(tf.int64, shape=[None], name='y_input')
-        clf_logits = naive_classifier.forward(self.x_input)
+        clf_logits = naive_classifier.forward(self.x)
         det_logits = base_detector.forward(self.x_input)
 
         label_mask = tf.one_hot(idx, 10, dtype=tf.float32)
@@ -84,7 +82,7 @@ class PGDAttackOpt(PGDAttack):
 
         self.loss = clf_loss + det_loss
         self.grad = tf.gradients(self.loss, self.x_input)[0]
-
+        self.optimizer()
 opt_adv = x_test.copy()
 best_logit = np.asarray([-np.inf] * len(opt_adv))
 

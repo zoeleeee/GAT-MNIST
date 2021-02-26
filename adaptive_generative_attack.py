@@ -1,19 +1,18 @@
 import numpy as np
 import tensorflow as tf
 import sys
-import cifar10_input
-from model import Model, BayesClassifier
 from eval_utils import *
-from pgd_attack import PGDAttackCombined, PGDAttack
+from models import MadryClassifier, Classifier, BayesClassifier, PGDAttackClassifier, PGDAttackCombined, PGDAttack
 
 attack_method = sys.argv[-1]
 
-cifar = cifar10_input.CIFAR10Data('cifar10_data')
-eval_data = cifar.eval_data
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+tf.logging.set_verbosity(tf.logging.ERROR)
 
-# this classifier is very expensive to run so we limit to a few samples
-x_test = eval_data.xs.astype(np.float32)
-y_test = eval_data.ys.astype(np.int32)
+x_test = np.load('../mnist_update/data/mnist_data.npy')[60000:]
+y_test = np.load('../mnist_update/data/mnist_labels.npy')[60000:]
+if len(x_test.shape) > 2: x_test = x_test.reshape(x_test.shape[0], -1)
+if np.max(x_test) > 1: x_test = x_test.astype(np.float32) / 255.
 
 np.random.seed(123)
 sess = tf.Session()
@@ -38,28 +37,34 @@ x_test, y_test = x_test[idxs], y_test[idxs]
 
 if attack_method == 'fgsm':
     eps8_attack_config = {
-      'epsilon': 8.0,
+      'max_distance': 0.3,
       'num_steps': 1,
-      'step_size': 8.0,
+      'step_size': 0.3,
       'random_start': True,
-      'norm': 'Linf'
+      'norm': 'Linf',
+      'x_min': 0,
+      'x_max': 1.0,
+      'batch_size': 50,
+      'optimizer': 'adam',
     }
 elif attack_method == 'pgd':
     eps8_attack_config = {
-      'epsilon': 8.0,
+      'epsilon': 0.3,
       'num_steps': 100,
-      'step_size': 2.5 * 8.0 / 100,
+      'step_size': 0.01,
       'random_start': True,
-      'norm': 'Linf'
+      'norm': 'Linf',
+      'x_min': 0,
+      'x_max': 1.0,
+      'batch_size': 50,
+      'optimizer': 'adam',
     }
 
 class PGDAttackOpt(PGDAttack):
     def __init__(self, bayes_classifier, target, **kwargs):
         super().__init__(**kwargs)
 
-        self.x_input = tf.placeholder(dtype=tf.float32, shape=[None, 32, 32, 3], name='x_input')
-        self.y_input = tf.placeholder(tf.int64, shape=[None], name='y_input')
-        logits = bayes_classifier.forward(self.x_input)
+        logits = bayes_classifier.forward(self.x)
 
         label_mask = tf.one_hot(target, 10, dtype=tf.float32)
 
@@ -72,7 +77,8 @@ class PGDAttackOpt(PGDAttack):
         clf_loss = clf_target_logit - (1-mask)*clf_other_logit
         
         self.loss = clf_loss
-        self.grad = tf.gradients(self.loss, self.x_input)[0]
+        self.grad = tf.gradients(self.loss, self.x)[0]
+        self.setup_optimizer()
 
 opt_adv = x_test.copy()
 best_logit = np.asarray([-np.inf] * len(opt_adv))

@@ -10,31 +10,31 @@ from pgd_attack import PGDAttackCombined, PGDAttack
 
 attack_method = sys.argv[-1]
 
-cifar = cifar10_input.CIFAR10Data('cifar10_data')
-eval_data = cifar.eval_data
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+tf.logging.set_verbosity(tf.logging.ERROR)
 
-x_test = eval_data.xs.astype(np.float32)
-y_test = eval_data.ys.astype(np.int32)
+x_test = np.load('../mnist_update/data/mnist_data.npy')[60000:]
+y_test = np.load('../mnist_update/data/mnist_labels.npy')[60000:]
+if len(x_test.shape) > 2: x_test = x_test.reshape(x_test.shape[0], -1)
+if np.max(x_test) > 1: x_test = x_test.astype(np.float32) / 255.
 
 np.random.seed(123)
 sess = tf.Session()
 
-classifier = Model(mode='eval', var_scope='classifier')
-classifier_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
-                                    scope='classifier')
-classifier_saver = tf.train.Saver(var_list=classifier_vars)
-classifier_checkpoint = 'models/naturally_trained_prefixed_classifier/checkpoint-70000'
-
-factory = BaseDetectorFactory()
-classifier_saver.restore(sess, classifier_checkpoint)
+classifier = Classifier(var_scope='classifier', dataset='MNIST')
+classifier_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
+                                        scope='classifier')
+classifier_saver = tf.train.Saver(var_list=classifier_vars, max_to_keep=1)
+factory = BaseDetectorFactory(eps=0.3)
+classifier_saver.restore(sess, 'checkpoints/mnist/classifier')
 factory.restore_base_detectors(sess)
 
 base_detectors = factory.get_base_detectors()
 bayes_classifier = BayesClassifier(base_detectors)
 
 # compute detection thresholds on the test set
-nat_accs = get_nat_accs(x_test, y_test, logit_threshs, classifier, base_detectors, sess)
-nat_preds = batched_run(classifier.predictions, classifier.x_input, x_test, sess)
+nat_preds = sess.run(classifier.predictions,
+                         feed_dict={classifier.x_input: x_test})
 idxs = np.random.permutation(np.arange(len(x_test))[nat_preds==y_test])[:1000]
 x_test, y_test = x_test[idxs], y_test[idxs]
 
@@ -91,10 +91,8 @@ for ii in range(40):
                             **eps8_attack_config)
       
       x_test_adv = attack.batched_perturb(x_test, y_test, sess, batch_size=50)
-      
-      adv_preds = batched_run(classifier.predictions,
-                              classifier.x_input, x_test_adv, sess)
-
+      adv_preds = sess.run(classifier.predictions,
+                         feed_dict={classifier.x_input: x_test_adv})
       print(x_test.shape, x_test_adv.shape, adv_preds.shape)
       det_logits = get_det_logits(x_test_adv, adv_preds, base_detectors, sess)
       

@@ -45,21 +45,23 @@ def mine_roc(preds_dist_nat, preds_dist_adv, error_idxs):
         tpr.append(nat2nat*1.0/len(preds_dist_nat))
         #fpr.append(nat2adv*1.0/len(preds_dist_nat))
         fpr.append(adv2nat*1.0/len(preds_dist_adv))
+    fpr.append(1.0)
+    tpr.append(tpr[-1])
     mine_auc = np.round(auc(fpr, tpr), 5)
     return tpr, fpr, mine_auc
 
-preds_dist_nat = np.load('BAES/hamming/dist_nat.npy')
-#nat_correct_idxs = np.load('../../BAES/hamming/correct_idxs.npy')
-#nat_error_idxs = np.load('../../BAES/hamming/error_idxs.npy')
-preds_dist_adv = np.load('BAES/hamming/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
-#adv_correct_idxs = np.load('../../BAES/hamming/{}/correct_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
-adv_error_idxs = np.load('BAES/hamming/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
+preds_dist_nat = np.load('../mnist_update/BAES/hamming/dist_nat.npy')
+#nat_correct_idxs = np.load('../mnist_update/BAES/hamming/correct_idxs.npy')
+#nat_error_idxs = np.load('../mnist_update/BAES/hamming/error_idxs.npy')
+preds_dist_adv = np.load('../mnist_update/BAES/hamming/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
+#adv_correct_idxs = np.load('../mnist_update/BAES/hamming/{}/correct_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
+adv_error_idxs = np.load('../mnist_update/BAES/hamming/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
 tpr, fpr, mine_auc = mine_roc(preds_dist_nat, preds_dist_adv, adv_error_idxs)
 plt.plot(fpr, tpr, label='hamming auc: {}'.format(mine_auc))
 
-preds_dist_nat = np.load('BAES/euclidean/dist_nat.npy')
-preds_dist_adv = np.load('BAES/euclidean/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
-adv_error_idxs = np.load('BAES/hamming/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
+preds_dist_nat = np.load('../mnist_update/BAES/euclidean/dist_nat.npy')
+preds_dist_adv = np.load('../mnist_update/BAES/euclidean/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
+adv_error_idxs = np.load('../mnist_update/BAES/hamming/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
 tpr, fpr, mine_auc = mine_roc(preds_dist_nat, preds_dist_adv, adv_error_idxs)
 plt.plot(fpr, tpr, label='euclidean metric: {}'.format(mine_auc))
 
@@ -76,11 +78,15 @@ with tf.Session() as sess:
     # Integrated detection
     tpr = get_tpr(x_test, logit_ths, classifier, base_detectors, sess)
     fpr = get_fpr(x_test_adv, y_test, logit_ths, classifier, base_detectors, sess)
+    fpr = [1.0] + fpr
+    tpr = [tpr[0]] + tpr
     plt.plot(fpr, tpr, label='Integrated detection: {}'.format(np.round(auc(fpr, tpr), 5)))
 
     # Generative detection
     tpr = bayes_classifier.nat_tpr(x_test, sess)
     fpr = bayes_classifier.adv_fpr(x_test_adv, y_test, sess)
+    tpr = [tpr[0]] + tpr
+    fpr = [1.] + fpr
     plt.plot(fpr, tpr, label='Generative detection: {}'.format(np.round(auc(fpr, tpr), 5)))
 
     # plt.ylim([0.9, 1.0])

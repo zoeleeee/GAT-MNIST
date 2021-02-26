@@ -179,12 +179,22 @@ class BayesClassifier(object):
 
     def forward(self, x):
         # shape: [batch, num_classes]
-        return tf.stack([d.net.forward(x) for d in self.detectors], axis=1)
+        res = tf.stack([d.net.forward(x) for d in self.detectors], axis=1)
+        return res
+
+    def batch_run(self, f, x, sess):
+        batch_size = 50
+        res1, res2 = [], []
+        for i in range(0, len(x), batch_size):
+            xx = x[i:i+batch_size]
+            tmp1, tmp2 = sess.run(f, feed_dict={self.x_input: xx})
+            res1.append(tmp1)
+            res2.append(tmp2)
+        return np.concatenate(res1, axis=0), np.concatenate(res2, axis=0)
 
     def nat_accs(self, x_nat, y, sess):
         """Accuracies on natural dataset."""
-        nat_logits, nat_preds = sess.run([self.logits, self.predictions],
-                                         feed_dict={self.x_input: x_nat})
+        nat_logits, nat_preds = self.batch_run([self.logits, self.predictions],x_nat, sess)
         # p_x = np.mean(sigmoid(nat_logits), axis=1)
         p_x = np.max(nat_logits, axis=1)
         nat_accs = [
@@ -195,8 +205,7 @@ class BayesClassifier(object):
 
     def nat_tpr(self, x_nat, sess):
         """True positive rates on natural dataset."""
-        nat_logits, nat_preds = sess.run([self.logits, self.predictions],
-                                         feed_dict={self.x_input: x_nat})
+        nat_logits, nat_preds = self.batch_run([self.logits, self.predictions],x_nat, sess)
         # p_x = np.mean(sigmoid(nat_logits), axis=1)
         print('nat logits min/max {}/{}'.format(nat_logits.min(),
                                                 nat_logits.max()))
@@ -210,8 +219,7 @@ class BayesClassifier(object):
 
     def adv_error(self, x_adv, y, sess):
         """The error on perturbed dataset."""
-        adv_logits, adv_preds = sess.run([self.logits, self.predictions],
-                                         feed_dict={self.x_input: x_adv})
+        adv_logits, adv_preds = self.batch_run([self.logits, self.predictions],x_adv, sess)
         # p_x = np.mean(sigmoid(adv_logits), axis=1)
         # print('adv logits min/max {}/{}'.format(adv_logits.min(), adv_logits.max()))
         p_x = np.max(adv_logits, axis=1)

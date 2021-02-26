@@ -16,14 +16,18 @@ tf.logging.set_verbosity(tf.logging.ERROR)
 
 np.random.seed(123)
 
-(x_train, y_train), (x_test, y_test) = load_mnist_data()
+x_test = np.load('../mnist_update/data/mnist_data.npy')[60000:]
+y_test = np.load('../mnist_update/data/mnist_labels.npy')[60000:]
+if len(x_test.shape) > 2: x_test = x_test.reshape(x_test.shape[0], -1)
+if np.max(x_test) > 1: x_test = x_test.astype(np.float32) / 255.
+#(x_train, y_train), (x_test, y_test) = load_mnist_data()
 x_test_adv = np.load(AES_FILE)
 if len(x_test_adv.shape) > 2: x_test_adv = x_test_adv.reshape(x_test_adv.shape[0], -1)
 if np.max(x_test_adv) > 1: x_test_adv = x_test_adv.astype(np.float32) / 255.
 adv_idxs = np.load(AES_FILE[:-4]+'_idxs.npy')
 x_test = x_test[adv_idxs]
 y_test = y_test[adv_idxs]
-
+print(x_test.shape, x_test_adv.shape)
 def mine_acc(preds_dist_nat, preds_dist_adv, nat_correct_idxs, adv_error_idxs):
     acc, err = [0], [0]#[1.], [1.]
     thrs = np.union1d(preds_dist_adv,preds_dist_nat)
@@ -34,17 +38,17 @@ def mine_acc(preds_dist_nat, preds_dist_adv, nat_correct_idxs, adv_error_idxs):
         err.append(adv2wrong*1.0/len(preds_dist_adv))
     return acc, err
 
-preds_dist_nat = np.load('BAES/hamming/dist_nat.npy')
-nat_correct_idxs = np.load('BAES/hamming/correct_idxs.npy')
-preds_dist_adv = np.load('BAES/hamming/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
-adv_error_idxs = np.load('BAES/hamming/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
+preds_dist_nat = np.load('../mnist_update/BAES/hamming/dist_nat.npy')
+nat_correct_idxs = np.load('../mnist_update/BAES/hamming/correct_idxs.npy')
+preds_dist_adv = np.load('../mnist_update/BAES/hamming/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
+adv_error_idxs = np.load('../mnist_update/BAES/hamming/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
 acc, err = mine_acc(preds_dist_nat, preds_dist_adv, nat_correct_idxs, adv_error_idxs)
 plt.plot(err, acc, label='hamming')
 
-preds_dist_nat = np.load('BAES/euclidean/dist_nat.npy')
-nat_correct_idxs = np.load('BAES/euclidean/correct_idxs.npy')
-preds_dist_adv = np.load('BAES/euclidean/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
-adv_error_idxs = np.load('BAES/euclidean/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
+preds_dist_nat = np.load('../mnist_update/BAES/euclidean/dist_nat.npy')
+nat_correct_idxs = np.load('../mnist_update/BAES/euclidean/correct_idxs.npy')
+preds_dist_adv = np.load('../mnist_update/BAES/euclidean/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
+adv_error_idxs = np.load('../mnist_update/BAES/euclidean/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
 acc, err = mine_acc(preds_dist_nat, preds_dist_adv, nat_correct_idxs, adv_error_idxs)
 plt.plot(err, acc, label='euclidean')
 
@@ -66,12 +70,12 @@ def get_integrated():
                                     base_detectors, sess)
         adv_errors = get_adv_errors(x_test_adv, y_test, logit_ths, classifier,
                                         base_detectors, sess)
-        np.save('BAES/integrated/{}_err.npy'.format(AES_FILE.split('/')[:-4]), adv_errors)
-        np.save('BAES/integrated/{}_acc.npy'.format(AES_FILE.split('/')[:-4]), nat_accs)
+        np.save('../mnist_update/BAES/integrated/{}_err.npy'.format(AES_FILE.split('/')[:-4]), adv_errors)
+        np.save('../mnist_update/BAES/integrated/{}_acc.npy'.format(AES_FILE.split('/')[:-4]), nat_accs)
 
 def get_tmp_integrated():
-    adv_errors = np.load('BAES/integrated/{}_err.npy'.format(AES_FILE.split('/')[:-4]))
-    nat_accs = np.load('BAES/integrated/{}_acc.npy'.format(AES_FILE.split('/')[:-4]))
+    adv_errors = np.load('../mnist_update/BAES/integrated/{}_err.npy'.format(AES_FILE.split('/')[:-4]))
+    nat_accs = np.load('../mnist_update/BAES/integrated/{}_acc.npy'.format(AES_FILE.split('/')[:-4]))
     plt.plot(adv_errors,
                      nat_accs,
                      label='Integrated classifier')

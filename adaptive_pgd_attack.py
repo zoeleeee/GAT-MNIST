@@ -40,23 +40,31 @@ x_test, y_test = x_test[idxs], y_test[idxs]
 
 if attack_method == 'fgsm':
     eps8_attack_config = {
-      'epsilon': 8.0,
+      'max_distance': 0.3,
       'num_steps': 1,
-      'step_size': 8.0,
+      'step_size': 0.3,
       'random_start': True,
-      'norm': 'Linf'
+      'norm': 'Linf',
+      'x_min': 0,
+      'x_max': 1.0,
+      'batch_size': 50,
+      'optimizer': 'adam',
     }
 elif attack_method == 'pgd':
     eps8_attack_config = {
-      'epsilon': 8.0,
+      'epsilon': 0.3,
       'num_steps': 100,
-      'step_size': 2.5 * 8.0 / 100,
+      'step_size': 0.01,
       'random_start': True,
-      'norm': 'Linf'
+      'norm': 'Linf',
+      'x_min': 0,
+      'x_max': 1.0,
+      'batch_size': 50,
+      'optimizer': 'adam',
     }
 
 class PGDAttackOpt(PGDAttack):
-    def __init__(self, naive_classifier, base_detector, **kwargs):
+    def __init__(self, naive_classifier, base_detector, idx, **kwargs):
         super().__init__(**kwargs)
 
         self.x_input = tf.placeholder(dtype=tf.float32, shape=[None, 32, 32, 3], name='x_input')
@@ -64,12 +72,12 @@ class PGDAttackOpt(PGDAttack):
         clf_logits = naive_classifier.forward(self.x_input)
         det_logits = base_detector.forward(self.x_input)
 
-        label_mask = tf.one_hot(base_detector.target_class, 10, dtype=tf.float32)
+        label_mask = tf.one_hot(idx, 10, dtype=tf.float32)
 
         clf_target_logit = tf.reduce_sum(label_mask * clf_logits, axis=1)
         clf_other_logit = tf.reduce_max((1 - label_mask) * clf_logits - 1e4 * label_mask, axis=1)
 
-        det_target_logit = tf.reduce_sum(label_mask * det_logits, axis=1)
+        det_target_logit = det_logits
 
         # maximize target logit and minimize 2nd best logit until we have a targeted misclassification
         mask = tf.cast(tf.greater(clf_target_logit - 0.01, clf_other_logit), tf.float32)

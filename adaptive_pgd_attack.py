@@ -1,12 +1,8 @@
 import numpy as np
 import tensorflow as tf
-
-import sys
-
-import cifar10_input
-from model import Model, BayesClassifier
 from eval_utils import *
-from pgd_attack import PGDAttackCombined, PGDAttack
+import sys
+from models import MadryClassifier, Classifier, BayesClassifier, PGDAttackClassifier, PGDAttackCombined, PGDAttack
 
 attack_method = sys.argv[-1]
 
@@ -40,19 +36,27 @@ x_test, y_test = x_test[idxs], y_test[idxs]
 
 if attack_method == 'fgsm':
     eps8_attack_config = {
-      'epsilon': 8.0,
+      'max_distance': 0.3,
       'num_steps': 1,
-      'step_size': 8.0,
+      'step_size': 0.3,
       'random_start': True,
-      'norm': 'Linf'
+      'norm': 'Linf',
+      'x_min': 0,
+      'x_max': 1.0,
+      'batch_size': 50,
+      'optimizer': 'adam',
     }
 elif attack_method == 'pgd':
     eps8_attack_config = {
-      'epsilon': 8.0,
+      'epsilon': 0.3,
       'num_steps': 100,
-      'step_size': 2.5 * 8.0 / 100,
+      'step_size': 0.01,
       'random_start': True,
-      'norm': 'Linf'
+      'norm': 'Linf',
+      'x_min': 0,
+      'x_max': 1.0,
+      'batch_size': 50,
+      'optimizer': 'adam',
     }
 
 class PGDAttackOpt(PGDAttack):

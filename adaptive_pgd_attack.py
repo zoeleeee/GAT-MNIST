@@ -1,12 +1,8 @@
 import numpy as np
 import tensorflow as tf
-
-import sys
-
-import cifar10_input
-from model import Model, BayesClassifier
 from eval_utils import *
-from pgd_attack import PGDAttackCombined, PGDAttack
+import sys
+from models import MadryClassifier, Classifier, BayesClassifier, PGDAttackClassifier, PGDAttackCombined, PGDAttack
 
 attack_method = sys.argv[-1]
 

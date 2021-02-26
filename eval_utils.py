@@ -3,7 +3,6 @@ import numpy as np
 import tensorflow as tf
 from models import Detector
 
-
 def load_mnist_data():
     mnist = tf.keras.datasets.mnist
 

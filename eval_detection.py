@@ -6,22 +6,23 @@ import tensorflow as tf
 from models import Classifier, BayesClassifier, PGDAttackClassifier, PGDAttackCombined
 from eval_utils import BaseDetectorFactory, load_mnist_data
 from eval_utils import get_tpr, get_fpr
+from sklearn.metrics import roc_curve, auc
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.logging.set_verbosity(tf.logging.ERROR)
 
 np.random.seed(123)
-attack_file = sys.argv[-1]
+AES_FILE = sys.argv[-1]
 
 # (x_train, y_train), (x_test, y_test) = load_mnist_data()
 x_test = np.load('../mnist_update/data/mnist_data.npy')[60000:]
 y_test = np.load('../mnist_update/data/mnist_labels.npy')[60000:]
-if np.argmin(x_test.shape) == 1: x_test = x_test.transpose((0,2,3,1))
+if len(x_test.shape) > 2: x_test = x_test.reshape(x_test.shape[0], -1)
 if np.max(x_test) > 1: x_test = x_test.astype(np.float32) / 255.
-idxs = np.load(attack_file[:-4]+'_idxs.npy')
+idxs = np.load(AES_FILE[:-4]+'_idxs.npy')
 x_test, y_test = x_test[idxs], y_test[idxs]
-x_test_adv = np.load(attack_file)
-if np.argmin(x_test_adv.shape) == 1: x_test_adv = x_test_adv.transpose((0,2,3,1))
+x_test_adv = np.load(AES_FILE)
+if len(x_test_adv.shape) > 2: x_test_adv = x_test_adv.reshape(x_test_adv.shape[0],-1)
 if np.max(x_test_adv) > 1: x_test_adv = x_test_adv.astype(np.float32) / 255.
 assert x_test_adv.shape==x_test.shape, 'adv shape: {}, nat shape: {}'.format(x_test_adv.shape, x_test.shape)
 
@@ -71,18 +72,15 @@ with tf.Session() as sess:
     base_detectors = factory.get_base_detectors()
     bayes_classifier = BayesClassifier(base_detectors)
 
-    def compute_fpr(x_test_adv, sess):
-        return 
-
     # Integrated detection
     tpr = get_tpr(x_test, logit_ths, classifier, base_detectors, sess)
     fpr = get_fpr(x_test_adv, y_test, logit_ths, classifier, base_detectors, sess)
-    plt.plot(fpr, tpr, label='Integrated detection')
+    plt.plot(fpr, tpr, label='Integrated detection: {}'.format(np.round(auc(fpr, tpr), 5)))
 
     # Generative detection
     tpr = bayes_classifier.nat_tpr(x_test, sess)
     fpr = bayes_classifier.adv_fpr(x_test_adv, y_test, sess)
-    plt.plot(fpr, tpr, label='Generative detection')
+    plt.plot(fpr, tpr, label='Generative detection: {}'.format(np.round(auc(fpr, tpr), 5)))
 
     # plt.ylim([0.9, 1.0])
     # plt.xlim([0.0, 0.5])
@@ -90,4 +88,4 @@ with tf.Session() as sess:
     plt.ylabel('True Positive Rate')
     plt.legend()
     plt.grid(True, alpha=0.5)
-    plt.show()
+    plt.savefig('pics/roc_{}.png'.format(AES_FILE.split('/')[-1][:-4]))

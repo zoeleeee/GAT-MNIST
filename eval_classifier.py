@@ -8,6 +8,8 @@ from eval_utils import BaseDetectorFactory, load_mnist_data
 from eval_utils import get_adv_errors, get_nat_accs
 
 AES_FILE= sys.argv[-1]
+phase = eval(sys.argv[-2])
+assert phase in [1,2], '{} not in [1,2]'.format(phase)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -108,9 +110,10 @@ def get_generative():
         bayes_adv_errors = bayes_classifier.adv_error(x_test_adv, y_test,
                                                       sess)
         plt.plot(bayes_adv_errors, bayes_nat_accs, label='Generative classifier')
-get_tmp_integrated()
-get_generative()
-# get_integrated()
+if phase == 2:
+    get_tmp_integrated()
+    get_generative()
+elif phase == 1: get_integrated()
 plt.xlabel('Error on perturbed MNIST test set')
 plt.ylabel('Accuracy on MNSIT test set')
 plt.legend()

@@ -33,14 +33,14 @@ classifier_saver = tf.train.Saver(var_list=classifier_vars, max_to_keep=1)
 factory = BaseDetectorFactory(eps=0.3)
 
 ####mine######
-def mine_roc(preds_dist_nat, preds_dist_adv):
+def mine_roc(preds_dist_nat, preds_dist_adv, error_idxs):
     tpr, fpr = [0], [0]#[1.], [1.]
     thrs = np.union1d(preds_dist_adv,preds_dist_nat)
     for d in thrs:
         #adv2adv = np.sum(preds_dist_adv > d)
         nat2nat = np.sum(preds_dist_nat <= d)
         #nat2adv = np.sum(preds_dist_nat > d)
-        adv2nat = np.sum(preds_dist_adv <= d)
+        adv2nat = np.sum(preds_dist_adv[error_idxs] <= d)
         #tpr.append(adv2adv*1.0/len(preds_dist_adv))
         tpr.append(nat2nat*1.0/len(preds_dist_nat))
         #fpr.append(nat2adv*1.0/len(preds_dist_nat))
@@ -53,13 +53,14 @@ preds_dist_nat = np.load('BAES/hamming/dist_nat.npy')
 #nat_error_idxs = np.load('../../BAES/hamming/error_idxs.npy')
 preds_dist_adv = np.load('BAES/hamming/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
 #adv_correct_idxs = np.load('../../BAES/hamming/{}/correct_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
-#adv_error_idxs = np.load('../../BAES/hamming/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
-tpr, fpr, mine_auc = mine_roc(preds_dist_nat, preds_dist_adv)
+adv_error_idxs = np.load('BAES/hamming/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
+tpr, fpr, mine_auc = mine_roc(preds_dist_nat, preds_dist_adv, adv_error_idxs)
 plt.plot(fpr, tpr, label='hamming auc: {}'.format(mine_auc))
 
 preds_dist_nat = np.load('BAES/euclidean/dist_nat.npy')
 preds_dist_adv = np.load('BAES/euclidean/{}/dist_adv.npy'.format(AES_FILE.split('/')[-1][:-4]))
-tpr, fpr, mine_auc = mine_roc(preds_dist_nat, preds_dist_adv)
+adv_error_idxs = np.load('BAES/hamming/{}/error_idxs.npy'.format(AES_FILE.split('/')[-1][:-4]))
+tpr, fpr, mine_auc = mine_roc(preds_dist_nat, preds_dist_adv, adv_error_idxs)
 plt.plot(fpr, tpr, label='euclidean metric: {}'.format(mine_auc))
 
 # plt.figure(figsize=(3.5 * 1.7, 2 * 1.7))

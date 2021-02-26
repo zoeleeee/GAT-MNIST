@@ -17,14 +17,12 @@ if np.max(x_test) > 1: x_test = x_test.astype(np.float32) / 255.
 np.random.seed(123)
 sess = tf.Session()
 
-classifier = Model(mode='eval', var_scope='classifier')
-classifier_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
-                            scope='classifier')
-classifier_saver = tf.train.Saver(var_list=classifier_vars)
-classifier_checkpoint = 'models/adv_trained_prefixed_classifier/checkpoint-70000'
-
-factory = BaseDetectorFactory()
-classifier_saver.restore(sess, classifier_checkpoint)
+classifier = MadryClassifier(var_scope='classifier')
+classifier_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
+                                    scope='classifier')
+classifier_saver = tf.train.Saver(var_list=classifier_vars, max_to_keep=1)
+factory = BaseDetectorFactory(eps=0.3)
+classifier_saver.restore(sess, 'checkpoints/mnist/adv_trained_prefixed_classifier/checkpoint-99900')
 factory.restore_base_detectors(sess)
 base_detectors = factory.get_base_detectors()
 bayes_classifier = BayesClassifier(base_detectors)

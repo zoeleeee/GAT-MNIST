@@ -10,7 +10,7 @@ from eval_utils import *
 
 AES_FILE = sys.argv[-1]
 attack_method = sys.argv[-2]
-
+sign = sys.argv[-3]
 if attack_method == 'fgsm':
     eps8_attack_config = {
       'max_distance': 0.3,
@@ -90,7 +90,7 @@ def get_integrated():
     base_detectors = factory.get_base_detectors()
     bayes_classifier = BayesClassifier(base_detectors)
 
-    nat_accs = get_nat_accs(x_test, y_test, logit_threshs, classifier, base_detectors, sess)
+    nat_accs = get_nat_accs(x_test, y_test, logit_ths, classifier, base_detectors, sess)
     nat_preds = batched_run(classifier.predictions, classifier.x_input, x_test, sess)
     idxs = np.random.permutation(np.arange(len(x_test))[nat_preds==y_test])[:1000]
     x_test, y_test = x_test[idxs], y_test[idxs]
@@ -167,3 +167,9 @@ def get_generative():
   plt.legend()
   plt.grid(True, alpha=0.5)
   plt.savefig('../../pics/white_{}_{}.png'.format(attack_method, AES_FILE.split('/')[-1][:-4]))
+
+if sign == 1:
+  get_integrated()
+elif sign == 2:
+  get_tmp_integrated()
+  get_generative()
